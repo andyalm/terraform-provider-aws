@@ -6,6 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/servicecatalog"
 	"github.com/hashicorp/aws-sdk-go-base/tfawserr"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/terraform-providers/terraform-provider-aws/aws/internal/tfresource"
 )
 
 const (
@@ -59,10 +60,16 @@ func ProductDeleted(conn *servicecatalog.ServiceCatalog, acceptLanguage, product
 	return nil, err
 }
 
-func PortfolioShareReady(conn *servicecatalog.ServiceCatalog, portfolioID, shareType, principalID string) (*servicecatalog.PortfolioShareDetail, error) {
+func PortfolioShareReady(conn *servicecatalog.ServiceCatalog, portfolioID, shareType, principalID string, acceptRequired bool) (*servicecatalog.PortfolioShareDetail, error) {
+	targets := []string{servicecatalog.ShareStatusCompleted}
+
+	if !acceptRequired {
+		targets = append(targets, servicecatalog.ShareStatusInProgress)
+	}
+
 	stateConf := &resource.StateChangeConf{
 		Pending: []string{servicecatalog.ShareStatusNotStarted, servicecatalog.ShareStatusInProgress, StatusNotFound, StatusUnavailable},
-		Target:  []string{servicecatalog.ShareStatusCompleted},
+		Target:  targets,
 		Refresh: PortfolioShareStatus(conn, portfolioID, shareType, principalID),
 		Timeout: PortfolioShareCreateTimeout,
 	}
@@ -76,10 +83,16 @@ func PortfolioShareReady(conn *servicecatalog.ServiceCatalog, portfolioID, share
 	return nil, err
 }
 
-func PortfolioShareCreatedWithToken(conn *servicecatalog.ServiceCatalog, token string) (*servicecatalog.DescribePortfolioShareStatusOutput, error) {
+func PortfolioShareCreatedWithToken(conn *servicecatalog.ServiceCatalog, token string, acceptRequired bool) (*servicecatalog.DescribePortfolioShareStatusOutput, error) {
+	targets := []string{servicecatalog.ShareStatusCompleted}
+
+	if !acceptRequired {
+		targets = append(targets, servicecatalog.ShareStatusInProgress)
+	}
+
 	stateConf := &resource.StateChangeConf{
 		Pending: []string{servicecatalog.ShareStatusNotStarted, servicecatalog.ShareStatusInProgress, StatusNotFound, StatusUnavailable},
-		Target:  []string{servicecatalog.ShareStatusCompleted},
+		Target:  targets,
 		Refresh: PortfolioShareStatusWithToken(conn, token),
 		Timeout: PortfolioShareCreateTimeout,
 	}
@@ -102,6 +115,10 @@ func PortfolioShareDeleted(conn *servicecatalog.ServiceCatalog, portfolioID, sha
 	}
 
 	outputRaw, err := stateConf.WaitForState()
+
+	if tfresource.NotFound(err) {
+		return nil, nil
+	}
 
 	if output, ok := outputRaw.(*servicecatalog.PortfolioShareDetail); ok {
 		return output, err
