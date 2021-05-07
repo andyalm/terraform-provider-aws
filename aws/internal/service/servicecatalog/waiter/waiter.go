@@ -59,11 +59,11 @@ func ProductDeleted(conn *servicecatalog.ServiceCatalog, acceptLanguage, product
 	return nil, err
 }
 
-func PortfolioShareReady(conn *servicecatalog.ServiceCatalog, portfolioID, shareType, accountID, orgNodeValue string) (*servicecatalog.PortfolioShareDetail, error) {
+func PortfolioShareReady(conn *servicecatalog.ServiceCatalog, portfolioID, shareType, principalID string) (*servicecatalog.PortfolioShareDetail, error) {
 	stateConf := &resource.StateChangeConf{
 		Pending: []string{servicecatalog.ShareStatusNotStarted, servicecatalog.ShareStatusInProgress, StatusNotFound, StatusUnavailable},
 		Target:  []string{servicecatalog.ShareStatusCompleted},
-		Refresh: PortfolioShareStatus(conn, portfolioID, shareType, accountID, orgNodeValue),
+		Refresh: PortfolioShareStatus(conn, portfolioID, shareType, principalID),
 		Timeout: PortfolioShareCreateTimeout,
 	}
 
@@ -93,11 +93,11 @@ func PortfolioShareCreatedWithToken(conn *servicecatalog.ServiceCatalog, token s
 	return nil, err
 }
 
-func PortfolioShareDeleted(conn *servicecatalog.ServiceCatalog, portfolioID, shareType, accountID, orgNodeValue string) (*servicecatalog.PortfolioShareDetail, error) {
+func PortfolioShareDeleted(conn *servicecatalog.ServiceCatalog, portfolioID, shareType, principalID string) (*servicecatalog.PortfolioShareDetail, error) {
 	stateConf := &resource.StateChangeConf{
 		Pending: []string{servicecatalog.ShareStatusNotStarted, servicecatalog.ShareStatusInProgress, servicecatalog.ShareStatusCompleted, StatusUnavailable},
 		Target:  []string{StatusNotFound},
-		Refresh: PortfolioShareStatus(conn, portfolioID, shareType, accountID, orgNodeValue),
+		Refresh: PortfolioShareStatus(conn, portfolioID, shareType, principalID),
 		Timeout: PortfolioShareCreateTimeout,
 	}
 
